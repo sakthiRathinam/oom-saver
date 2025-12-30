@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -19,18 +20,49 @@ func main() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	getProcessesList()
-
-	for range ticker.C {
-		(updateProcessList)
+	processes, err := getProcessList()
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
+	for range ticker.C {
+		processes, err = getProcessList()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		processes, err = killProcessIfZombie(processes)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+	return
 }
 
-func updateProcessList() {
+
+func killProcessIfZombie(processes []Process) ([]Process, error) {
+	var activeProcesses []Process
+
+	for _, proc := range processes {
+		if proc.Status == "zombie" {
+			fmt.Printf("Found zombie process: PID %d (%s), sending SIGTERM...\n", proc.PID, proc.Name)
+			err := syscall.Kill(proc.PID, syscall.SIGTERM)
+			if err != nil {
+				fmt.Printf("  Warning: failed to send signal to PID %d: %v\n", proc.PID, err)
+			}
+		} else {
+			activeProcesses = append(activeProcesses, proc)
+		}
+	}
+
+	return activeProcesses, nil
+}
+func getProcessList() ([]Process, error) {
 	processes, err := get_all_running_processes_from_os()
 	if err != nil {
 		fmt.Printf("Error fetching processes: %v\n", err)
-		return
+		return processes, err
 	}
 
 	fmt.Printf("\n[%s] Found %d running processes:\n", time.Now().Format("15:04:05"), len(processes))
@@ -48,6 +80,7 @@ func updateProcessList() {
 	if len(processes) > limit {
 		fmt.Printf("  ... and %d more processes\n", len(processes)-limit)
 	}
+	return processes, err
 }
 
 type Process struct {
