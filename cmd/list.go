@@ -12,6 +12,7 @@ import (
 var (
 	listLimit  int
 	listStatus string
+	listSafety string
 )
 
 var listCmd = &cobra.Command{
@@ -47,6 +48,17 @@ var listCmd = &cobra.Command{
 			processes = filtered
 		}
 
+		if listSafety != "" {
+			var filtered []process.Process
+			for _, p := range processes {
+				if p.SafetyLevel == listSafety {
+					filtered = append(filtered, p)
+				}
+			}
+			processes = filtered
+			fmt.Printf("%s Filtered to show only %s processes\n", ui.Cyan("ℹ️"), listSafety)
+		}
+
 		ui.PrintProcessTable(processes, listLimit)
 		fmt.Println()
 
@@ -58,4 +70,5 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().IntVarP(&listLimit, "limit", "l", 200, "Maximum number of processes to display")
 	listCmd.Flags().StringVarP(&listStatus, "status", "s", "", "Filter by status (e.g., zombie, running, sleeping)")
+	listCmd.Flags().StringVar(&listSafety, "safety", "", "Filter by safety level (critical, important, safe, unknown)")
 }

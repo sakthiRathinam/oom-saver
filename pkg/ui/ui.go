@@ -10,11 +10,14 @@ import (
 )
 
 var (
-	Green  = color.New(color.FgGreen).SprintFunc()
-	Yellow = color.New(color.FgYellow).SprintFunc()
-	Red    = color.New(color.FgRed).SprintFunc()
-	Cyan   = color.New(color.FgCyan).SprintFunc()
-	Bold   = color.New(color.Bold).SprintFunc()
+	Green     = color.New(color.FgGreen).SprintFunc()
+	Yellow    = color.New(color.FgYellow).SprintFunc()
+	Red       = color.New(color.FgRed).SprintFunc()
+	Cyan      = color.New(color.FgCyan).SprintFunc()
+	Bold      = color.New(color.Bold).SprintFunc()
+	White     = color.New(color.FgWhite).SprintFunc()
+	RedBold   = color.New(color.FgRed, color.Bold).SprintFunc()
+	GreenBold = color.New(color.FgGreen, color.Bold).SprintFunc()
 )
 
 func GetStatusColor(status string) func(a ...interface{}) string {
@@ -27,6 +30,36 @@ func GetStatusColor(status string) func(a ...interface{}) string {
 		return Yellow
 	default:
 		return fmt.Sprint
+	}
+}
+
+func GetSafetyColor(safetyLevel string) func(a ...interface{}) string {
+	switch safetyLevel {
+	case "critical":
+		return RedBold
+	case "important":
+		return Yellow
+	case "safe":
+		return Green
+	case "unknown":
+		return White
+	default:
+		return fmt.Sprint
+	}
+}
+
+func GetSafetyIcon(safetyLevel string) string {
+	switch safetyLevel {
+	case "critical":
+		return "🔴"
+	case "important":
+		return "🟡"
+	case "safe":
+		return "🟢"
+	case "unknown":
+		return "⚪"
+	default:
+		return "  "
 	}
 }
 
@@ -52,14 +85,22 @@ func PrintProcessTable(processes []process.Process, limit int) {
 	}
 
 	fmt.Printf("\n%s %s\n", Cyan("📊 Total processes:"), Bold(fmt.Sprintf("%d", len(processes))))
-	fmt.Println(Cyan("───────────────────────────────────────────────────────────────────"))
-	fmt.Printf("%-8s %-30s %-15s\n", "PID", "NAME", "STATUS")
-	fmt.Println(Cyan("───────────────────────────────────────────────────────────────────"))
+	fmt.Println(Cyan("═══════════════════════════════════════════════════════════════════════════════════"))
+	fmt.Printf("%-8s %-30s %-15s %-15s\n", "PID", "NAME", "STATUS", "SAFETY")
+	fmt.Println(Cyan("═══════════════════════════════════════════════════════════════════════════════════"))
 
 	for i := 0; i < limit; i++ {
 		p := processes[i]
-		colorFunc := GetStatusColor(p.Status)
-		fmt.Printf("%-8d %-30s %s\n", p.PID, p.Name, colorFunc(p.Status))
+		statusColor := GetStatusColor(p.Status)
+		safetyColor := GetSafetyColor(p.SafetyLevel)
+		safetyIcon := GetSafetyIcon(p.SafetyLevel)
+
+		fmt.Printf("%-8d %-30s %-15s %s %s\n",
+			p.PID,
+			p.Name,
+			statusColor(p.Status),
+			safetyIcon,
+			safetyColor(p.SafetyLevel))
 	}
 
 	if len(processes) > limit {
@@ -82,19 +123,32 @@ func CreateProgressBar(max int, description string) *progressbar.ProgressBar {
 }
 
 func PrintStats(processes []process.Process) {
-	stats := make(map[string]int)
+	statusStats := make(map[string]int)
+	safetyStats := make(map[string]int)
+
 	for _, p := range processes {
-		stats[p.Status]++
+		statusStats[p.Status]++
+		safetyStats[p.SafetyLevel]++
 	}
 
 	PrintHeader("📈 PROCESS STATISTICS")
 	PrintTimestamp()
 
 	fmt.Printf("\n%s %s\n", Bold("Total Processes:"), Cyan(fmt.Sprintf("%d", len(processes))))
-	fmt.Println(Cyan("───────────────────────────────────────────────────────────────────"))
 
-	for status, count := range stats {
+	fmt.Println(Cyan("\n━━━ By Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+	for status, count := range statusStats {
 		colorFunc := GetStatusColor(status)
 		fmt.Printf("  %-20s %s\n", colorFunc(status+":"), Bold(fmt.Sprintf("%d", count)))
+	}
+
+	fmt.Println(Cyan("\n━━━ By Safety Level ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+	safetyOrder := []string{"critical", "important", "safe", "unknown"}
+	for _, safety := range safetyOrder {
+		if count, ok := safetyStats[safety]; ok {
+			colorFunc := GetSafetyColor(safety)
+			icon := GetSafetyIcon(safety)
+			fmt.Printf("  %s %-15s %s\n", icon, colorFunc(safety+":"), Bold(fmt.Sprintf("%d", count)))
+		}
 	}
 }
