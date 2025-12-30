@@ -15,14 +15,14 @@ func main() {
 	fmt.Println("Starting OOM-saver process monitor...")
 	fmt.Println("Monitoring processes every 5 seconds. Press Ctrl+C to exit.")
 	fmt.Println()
-
+	var processes []Process
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	updateProcessList()
+	getProcessesList()
 
 	for range ticker.C {
-		updateProcessList()
+		(updateProcessList)
 	}
 }
 
