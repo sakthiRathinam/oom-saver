@@ -4,18 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OOM-saver is a Go-based system process monitoring tool designed to prevent out-of-memory situations. Currently in early development with Linux-focused implementation.
+OOM-Killer is a beautiful Cobra-based CLI tool for Linux system process monitoring and management. It monitors processes, detects and kills zombies, and can be installed as a systemd service.
 
 ## Development Commands
 
 ### Build
 ```bash
-go build -o oom-saver main.go
+go build -o oom-killer
 ```
 
-### Run
+### Run Commands
 ```bash
-go run main.go
+# List all processes
+./oom-killer list
+
+# Monitor processes continuously
+./oom-killer monitor
+
+# Show statistics
+./oom-killer stats
+
+# Kill a specific process
+./oom-killer kill <PID>
+
+# Install as systemd service (requires sudo)
+sudo ./oom-killer install
 ```
 
 ### Testing
@@ -28,32 +41,72 @@ go test ./...
 go fmt ./...
 ```
 
-### Run Linter (if golangci-lint is installed)
-```bash
-golangci-lint run
-```
-
 ## Code Architecture
 
-### Current Structure
+### Project Structure
 
-The codebase is currently minimal with a single-file architecture in `main.go`:
+```
+oom-saver/
+├── main.go                    # Entry point - executes Cobra root command
+├── cmd/                       # Cobra commands
+│   ├── root.go               # Root command configuration
+│   ├── list.go               # List processes once
+│   ├── monitor.go            # Continuous monitoring
+│   ├── stats.go              # Process statistics
+│   ├── kill.go               # Kill specific process
+│   └── install.go            # Install as systemd service
+├── pkg/
+│   ├── process/              # Process management logic
+│   │   └── process.go        # Process detection, parsing, killing
+│   └── ui/                   # UI formatting and display
+│       └── ui.go             # Colors, progress bars, tables
+├── go.mod
+└── CLAUDE.md
+```
 
-- **Process struct** (`main.go:19-23`): Core data structure representing system processes with Name, PID, and Status fields
-- **get_all_running_processes_from_os()** (`main.go:25-37`): OS detection layer that routes to platform-specific implementations based on runtime.GOOS
+### Core Components
+
+**pkg/process/process.go**
+- `Process` struct: Represents a system process (Name, PID, Status)
+- `GetAllRunningProcesses()`: Main entry point for getting all processes
+- `getAllRunningProcessesFromLinux()`: Reads from /proc directory
+- `parseProcessState()`: Maps Linux state codes to readable names
+- `KillProcessIfZombie()`: Automatically kills zombie processes
+- `KillProcess()`: Kills a specific process by PID and signal
+
+**pkg/ui/ui.go**
+- Color scheme: Green (running), Yellow (sleeping/idle), Red (zombie), Cyan (headers)
+- `PrintHeader()`: Prints formatted headers with borders
+- `PrintProcessTable()`: Displays process table with colors
+- `CreateProgressBar()`: Creates animated progress bars
+- `PrintStats()`: Displays process statistics by status
+
+**cmd/ Commands**
+- Each command is a separate file that uses Cobra framework
+- Commands use pkg/process for logic and pkg/ui for display
+- Flags are defined per-command for customization
 
 ### Platform Support
 
-The architecture uses runtime.GOOS to detect the operating system:
-- **Linux**: Partially implemented (calls `get_all_running_processes_from_linux()` but function is not yet defined)
-- **Windows**: Not implemented (returns error)
-- **macOS (darwin)**: Not implemented (returns error)
+Currently supports:
+- **Linux**: Fully implemented using /proc filesystem
+- **Windows**: Not implemented
+- **macOS**: Not implemented
 
-### Known Issues
+### Dependencies
 
-- The `get_all_running_processes_from_linux()` function is called in `main.go:31` but not yet implemented, which will cause compilation errors
-- The function at `main.go:25-37` always returns an error on line 36, even for Linux, due to the missing implementation
+- `github.com/spf13/cobra` - CLI framework
+- `github.com/fatih/color` - Terminal colors
+- `github.com/schollz/progressbar/v3` - Progress bars
 
-### Development Notes
+### systemd Service
 
-When adding platform-specific implementations, follow the pattern of creating separate functions for each OS (e.g., `get_all_running_processes_from_linux()`, `get_all_running_processes_from_windows()`, etc.) and routing through the main `get_all_running_processes_from_os()` function.
+The `install` command creates a systemd service at `/etc/systemd/system/oom-killer.service` that runs `oom-killer monitor` continuously. The binary is installed to `/usr/local/bin/oom-killer`.
+
+Manage the service with:
+```bash
+sudo systemctl status oom-killer
+sudo systemctl stop oom-killer
+sudo systemctl start oom-killer
+sudo journalctl -u oom-killer -f
+```
