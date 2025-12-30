@@ -8,7 +8,7 @@ import (
 )
 
 var criticalProcessNames = []string{
-	"systemd", "init", "kthreadd", "sshd", "dbus-daemon", "NetworkManager",
+	"systemd", "init", "kthreadd", "kworker", "sshd", "dbus-daemon", "NetworkManager",
 	"systemd-journald", "systemd-logind", "systemd-udevd", "systemd-networkd",
 }
 
