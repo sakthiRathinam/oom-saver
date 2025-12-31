@@ -20,6 +20,7 @@ A beautiful, intelligent Linux process monitoring and management tool with smart
 - Linux operating system
 - Go 1.16 or higher (for building from source)
 - Root access (for systemd service installation)
+- **notify-send** (required for memory alerts - usually pre-installed)
 
 ### Build from Source
 
@@ -35,11 +36,31 @@ go build -o oom-killer
 sudo ./oom-killer install
 ```
 
-The install command will interactively ask you:
-- What types of processes to auto-kill (user processes, browsers, etc.)
-- Which safety levels to target (Safe, Important, etc.)
-- OOM score thresholds for aggressive cleanup
-- How often to scan for problematic processes
+The install command will:
+1. **Check dependencies** - Verifies `notify-send` is installed (required for memory alerts)
+2. **Interactive configuration** - Asks you:
+   - What types of processes to auto-kill (user processes, browsers, etc.)
+   - Which safety levels to target (Safe, Important, etc.)
+   - Memory alert settings (threshold and cooldown)
+   - OOM score thresholds for aggressive cleanup
+   - How often to scan for problematic processes
+3. **Show summary** - Displays all settings before proceeding
+4. **Install** - Copies binary and creates systemd service
+
+**If notify-send is missing**, the installer will stop and show you how to install it:
+```bash
+# Debian/Ubuntu
+sudo apt install libnotify-bin
+
+# Fedora/RHEL
+sudo dnf install libnotify
+
+# Arch Linux
+sudo pacman -S libnotify
+
+# openSUSE
+sudo zypper install libnotify-tools
+```
 
 **Default behavior**: Only cleanup user-owned processes (UID >= 1000) and browser processes, preserving all system services.
 

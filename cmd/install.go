@@ -173,6 +173,25 @@ var installCmd = &cobra.Command{
 
 		ui.PrintHeader("📦 INSTALLING OOM-KILLER")
 
+		// Check if notify-send is installed
+		fmt.Printf("\n%s Checking dependencies...\n", ui.Cyan("ℹ️"))
+		_, err := exec.LookPath("notify-send")
+		if err != nil {
+			fmt.Printf("\n%s notify-send is not installed!\n", ui.Red("✗"))
+			fmt.Printf("\nMemory alerts require notify-send for desktop notifications.\n")
+			fmt.Printf("Please install it first:\n\n")
+			fmt.Printf("  %s\n", ui.Cyan("sudo apt install libnotify-bin"))
+			fmt.Printf("  %s (Debian/Ubuntu)\n\n", ui.Yellow("# For Debian/Ubuntu"))
+			fmt.Printf("  %s\n", ui.Cyan("sudo dnf install libnotify"))
+			fmt.Printf("  %s (Fedora/RHEL)\n\n", ui.Yellow("# For Fedora/RHEL"))
+			fmt.Printf("  %s\n", ui.Cyan("sudo pacman -S libnotify"))
+			fmt.Printf("  %s (Arch Linux)\n\n", ui.Yellow("# For Arch Linux"))
+			fmt.Printf("  %s\n", ui.Cyan("sudo zypper install libnotify-tools"))
+			fmt.Printf("  %s (openSUSE)\n\n", ui.Yellow("# For openSUSE"))
+			return fmt.Errorf("dependency check failed: notify-send not found")
+		}
+		fmt.Printf("   %s notify-send found\n", ui.Green("✓"))
+
 		// Interactive configuration
 		settings := getCleanupSettings()
 

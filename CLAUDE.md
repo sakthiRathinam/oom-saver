@@ -228,7 +228,12 @@ Currently supports:
 
 The `install` command provides an **interactive installation experience**:
 
-1. **Interactive Configuration**: Asks user what to auto-kill
+1. **Dependency Check**: Verifies `notify-send` is installed
+   - Required for desktop memory alerts
+   - Shows installation commands for different distros if missing
+   - Blocks installation until dependency is satisfied
+
+2. **Interactive Configuration**: Asks user what to auto-kill
    - User processes (UID >= 1000) - Default: YES
    - Browser processes (Chrome, Firefox, etc.) - Default: YES
    - Zombies only mode (safer) - Default: YES
@@ -237,12 +242,12 @@ The `install` command provides an **interactive installation experience**:
      - Threshold in GB - Default: 3
      - Cooldown in minutes - Default: 15
 
-2. **Configuration Summary**: Shows all settings before installation
+3. **Configuration Summary**: Shows all settings before installation
 
-3. **Service Creation**: Generates systemd service file with custom flags based on user choices
+4. **Service Creation**: Generates systemd service file with custom flags based on user choices
    - Automatically configures DISPLAY and DBUS environment for desktop notifications
 
-4. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services. Sends desktop notifications when memory is low.
+5. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services. Sends desktop notifications when memory is low.
 
 The service is installed to:
 - Binary: `/usr/local/bin/oom-killer`
