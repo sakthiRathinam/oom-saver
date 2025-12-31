@@ -18,6 +18,12 @@ var importantProcessNames = []string{
 	"mongod", "mongodb", "redis-server", "dockerd", "containerd",
 }
 
+var browserProcessNames = []string{
+	"chrome", "chromium", "firefox", "brave", "opera", "vivaldi",
+	"safari", "edge", "msedge", "epiphany", "qutebrowser", "falkon",
+	"palemoon", "waterfox", "seamonkey", "google-chrome",
+}
+
 func ClassifyProcess(p *Process) string {
 	if p.Status == "zombie" {
 		return "safe"
@@ -74,6 +80,16 @@ func isCriticalProcessName(name string) bool {
 func isImportantProcessName(name string) bool {
 	for _, important := range importantProcessNames {
 		if name == important || strings.HasPrefix(name, important) {
+			return true
+		}
+	}
+	return false
+}
+
+func IsBrowserProcess(name string) bool {
+	lowerName := strings.ToLower(name)
+	for _, browser := range browserProcessNames {
+		if lowerName == browser || strings.Contains(lowerName, browser) {
 			return true
 		}
 	}

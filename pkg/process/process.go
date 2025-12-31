@@ -21,6 +21,15 @@ type Process struct {
 	OOMScore    int
 }
 
+type CleanupConfig struct {
+	KillUserProcesses bool
+	KillBrowsers      bool
+	KillSafeLevel     bool
+	KillImportantLevel bool
+	MinOOMScore       int
+	KillZombiesOnly   bool
+}
+
 func GetAllRunningProcesses() ([]Process, error) {
 	currentOS := runtime.GOOS
 	var processes []Process
@@ -144,6 +153,67 @@ func KillProcessIfZombie(processes []Process, killAll bool) ([]Process, error) {
 				}
 			} else {
 				fmt.Printf("Skipping %s zombie: PID %d (%s) - use --auto-kill-all-zombies to kill\n", proc.SafetyLevel, proc.PID, proc.Name)
+				activeProcesses = append(activeProcesses, proc)
+			}
+		} else {
+			activeProcesses = append(activeProcesses, proc)
+		}
+	}
+
+	return activeProcesses, nil
+}
+
+func KillProcessWithConfig(processes []Process, config CleanupConfig) ([]Process, error) {
+	var activeProcesses []Process
+
+	for _, proc := range processes {
+		shouldKill := false
+		reason := ""
+
+		// Skip critical processes always
+		if proc.SafetyLevel == "critical" {
+			activeProcesses = append(activeProcesses, proc)
+			continue
+		}
+
+		// Check if zombies only mode is enabled
+		if config.KillZombiesOnly && proc.Status != "zombie" {
+			activeProcesses = append(activeProcesses, proc)
+			continue
+		}
+
+		// Check various kill conditions
+		if config.KillUserProcesses && proc.UID >= 1000 {
+			shouldKill = true
+			reason = "user process"
+		}
+
+		if config.KillBrowsers && IsBrowserProcess(proc.Name) {
+			shouldKill = true
+			reason = "browser process"
+		}
+
+		if config.KillSafeLevel && proc.SafetyLevel == "safe" {
+			shouldKill = true
+			reason = "safe level"
+		}
+
+		if config.KillImportantLevel && proc.SafetyLevel == "important" {
+			shouldKill = true
+			reason = "important level"
+		}
+
+		if config.MinOOMScore > 0 && proc.OOMScore >= config.MinOOMScore {
+			shouldKill = true
+			reason = fmt.Sprintf("OOM score %d >= %d", proc.OOMScore, config.MinOOMScore)
+		}
+
+		// Only kill zombies or problematic processes
+		if shouldKill && (proc.Status == "zombie" || proc.OOMScore > 500) {
+			fmt.Printf("Killing process: PID %d (%s) [%s] - %s\n", proc.PID, proc.Name, proc.SafetyLevel, reason)
+			err := syscall.Kill(proc.PID, syscall.SIGTERM)
+			if err != nil {
+				fmt.Printf("  Warning: failed to send signal to PID %d: %v\n", proc.PID, err)
 				activeProcesses = append(activeProcesses, proc)
 			}
 		} else {

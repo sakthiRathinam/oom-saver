@@ -10,10 +10,13 @@ OOM-Killer is a beautiful Cobra-based CLI tool for Linux system process monitori
 
 - **4-Level Safety Classification**: Critical, Important, Safe, Unknown
 - **Smart Zombie Killing**: Only kills safe zombies by default
+- **Configurable Cleanup**: Target user processes, browsers, by safety level, or OOM score
+- **Interactive Installation**: Guided setup with customizable cleanup rules
+- **Browser Detection**: Automatically identifies Chrome, Firefox, and other browsers
 - **Beautiful CLI Output**: Colors, icons, progress bars
 - **Safety Guards**: Prevents accidental killing of critical processes
 - **Flexible Filtering**: Filter by status or safety level
-- **Systemd Integration**: Install as a system service
+- **Systemd Integration**: Install as a system service with custom configuration
 
 ## Development Commands
 
@@ -41,6 +44,11 @@ go build -o oom-killer
 ./oom-killer monitor --auto-kill-all-zombies  # Kill all zombies (unsafe)
 ./oom-killer monitor --no-auto-kill           # Disable auto-kill
 
+# Monitor with custom cleanup configuration
+./oom-killer monitor --use-config --kill-user-processes --kill-browsers --zombies-only
+./oom-killer monitor --use-config --kill-safe --min-oom-score=600
+./oom-killer monitor --use-config --kill-important --kill-safe --interval=30s
+
 # Show statistics (includes safety breakdown)
 ./oom-killer stats
 
@@ -49,6 +57,11 @@ go build -o oom-killer
 ./oom-killer kill <PID> --force  # Force kill critical process (dangerous)
 
 # Install as systemd service (requires sudo)
+# Interactive installer will ask what to auto-kill:
+# - User processes (default: yes)
+# - Browser processes (default: yes)
+# - Zombies only mode (default: yes - safer)
+# - Advanced options: safety levels, OOM score thresholds
 sudo ./oom-killer install
 ```
 
@@ -91,21 +104,25 @@ oom-saver/
 
 **pkg/process/process.go**
 - `Process` struct: Represents a system process (Name, PID, Status, SafetyLevel, UID, PPID, OOMScore)
+- `CleanupConfig` struct: Configuration for flexible cleanup rules
 - `GetAllRunningProcesses()`: Main entry point - gets all processes and classifies them
 - `getAllRunningProcessesFromLinux()`: Reads from /proc directory
 - `parseProcessState()`: Maps Linux state codes to readable names
 - `KillProcessIfZombie(processes, killAll)`: Smart zombie killing (safe only by default)
+- `KillProcessWithConfig(processes, config)`: NEW - Configurable process cleanup with multiple criteria
 - `KillProcessWithSafety()`: Kills with safety checks
 - `GetProcessByPID()`: Gets detailed info for specific PID
 
-**pkg/process/classifier.go** (NEW)
+**pkg/process/classifier.go**
 - `ClassifyProcess()`: Main classification function - determines safety level
+- `IsBrowserProcess()`: NEW - Detects browser processes (Chrome, Firefox, etc.)
 - `readProcessUID()`: Reads process owner from /proc/[pid]/status
 - `readProcessPPID()`: Reads parent process ID
 - `readProcessOOMScore()`: Reads Linux OOM score
 - `isKernelThread()`: Detects kernel threads by name pattern
 - `isCriticalProcessName()`: Checks against critical process list
-- Hardcoded lists of critical and important process names
+- `isImportantProcessName()`: Checks against important process list
+- Hardcoded lists of critical, important, and browser process names
 
 **pkg/ui/ui.go**
 - Color scheme:
@@ -121,10 +138,20 @@ oom-saver/
 **cmd/ Commands**
 - Each command is a separate file that uses Cobra framework
 - Commands use pkg/process for logic and pkg/ui for display
-- `list.go`: Added `--safety` filter
-- `monitor.go`: Added `--auto-kill-all-zombies` and `--no-auto-kill` flags
+- `list.go`: `--safety` filter for filtering by safety level
+- `monitor.go`: Supports both legacy zombie killing and new configurable cleanup
+  - Legacy flags: `--auto-kill-all-zombies`, `--no-auto-kill`
+  - NEW configurable cleanup flags:
+    - `--use-config`: Enable custom cleanup configuration
+    - `--kill-user-processes`: Auto-kill user processes (UID >= 1000)
+    - `--kill-browsers`: Auto-kill browser processes
+    - `--kill-safe`: Auto-kill safe level processes
+    - `--kill-important`: Auto-kill important level processes
+    - `--min-oom-score=N`: Kill processes with OOM score >= N
+    - `--zombies-only`: Only kill zombies (safer)
 - `kill.go`: Added safety checks and `--force` flag
-- `classify.go`: NEW - Shows detailed classification for a PID
+- `classify.go`: Shows detailed classification for a PID
+- `install.go`: NEW - Interactive installer with guided cleanup configuration
 
 ### Safety Classification System
 
@@ -178,7 +205,23 @@ Currently supports:
 
 ### systemd Service
 
-The `install` command creates a systemd service at `/etc/systemd/system/oom-killer.service` that runs `oom-killer monitor` continuously. The binary is installed to `/usr/local/bin/oom-killer`.
+The `install` command provides an **interactive installation experience**:
+
+1. **Interactive Configuration**: Asks user what to auto-kill
+   - User processes (UID >= 1000) - Default: YES
+   - Browser processes (Chrome, Firefox, etc.) - Default: YES
+   - Zombies only mode (safer) - Default: YES
+   - Advanced options (safety levels, OOM scores) - Default: NO
+
+2. **Configuration Summary**: Shows all settings before installation
+
+3. **Service Creation**: Generates systemd service file with custom flags based on user choices
+
+4. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services
+
+The service is installed to:
+- Binary: `/usr/local/bin/oom-killer`
+- Service file: `/etc/systemd/system/oom-killer.service`
 
 Manage the service with:
 ```bash
@@ -187,3 +230,5 @@ sudo systemctl stop oom-killer
 sudo systemctl start oom-killer
 sudo journalctl -u oom-killer -f
 ```
+
+To reconfigure: Stop service, run `sudo ./oom-killer install` again with new settings.
