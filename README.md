@@ -7,6 +7,7 @@ A beautiful, intelligent Linux process monitoring and management tool with smart
 - **4-Level Safety Classification System** - Automatically classifies processes as Critical, Important, Safe, or Unknown
 - **Smart Zombie Process Detection** - Finds and safely kills zombie processes
 - **Intelligent Auto-Cleanup** - Configurable automatic cleanup based on safety levels and OOM scores
+- **Memory Monitoring & Alerts** - Desktop notifications when system memory is low (before OOM killer kicks in)
 - **Beautiful CLI Output** - Color-coded tables, progress bars, and intuitive icons
 - **Systemd Integration** - Install as a background service with interactive configuration
 - **Flexible Filtering** - Filter processes by status, safety level, or custom criteria
@@ -72,6 +73,10 @@ The install command will interactively ask you:
 
 # Monitor without auto-kill
 ./oom-killer monitor --no-auto-kill
+
+# Monitor with memory alerts (desktop notifications)
+./oom-killer monitor --memory-alert
+./oom-killer monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
 ```
 
 ### Show Statistics
@@ -173,6 +178,27 @@ sudo systemctl restart oom-killer
 ```
 
 ## How It Works
+
+### Memory Monitoring
+
+OOM-Killer can monitor system memory and send desktop notifications **before** the Linux OOM killer starts killing processes.
+
+When memory alerts are enabled:
+1. Monitors available system memory every scan interval
+2. Sends a desktop notification when available memory drops below the threshold (default: 3 GB)
+3. Includes a cooldown period to avoid notification spam (default: 15 minutes)
+4. Automatically stops alerting when memory is back to normal levels
+
+**Requirements:** Desktop notifications require `notify-send` (usually pre-installed):
+
+```bash
+# Install if missing
+sudo apt install libnotify-bin  # Debian/Ubuntu
+sudo dnf install libnotify      # Fedora
+sudo pacman -S libnotify        # Arch
+```
+
+The installer automatically configures environment variables for desktop notifications when running as a systemd service.
 
 ### Process Detection
 

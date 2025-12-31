@@ -11,6 +11,7 @@ OOM-Killer is a beautiful Cobra-based CLI tool for Linux system process monitori
 - **4-Level Safety Classification**: Critical, Important, Safe, Unknown
 - **Smart Zombie Killing**: Only kills safe zombies by default
 - **Configurable Cleanup**: Target user processes, browsers, by safety level, or OOM score
+- **Memory Monitoring**: Desktop notifications when system memory is low (before OOM killer)
 - **Interactive Installation**: Guided setup with customizable cleanup rules
 - **Browser Detection**: Automatically identifies Chrome, Firefox, and other browsers
 - **Beautiful CLI Output**: Colors, icons, progress bars
@@ -48,6 +49,11 @@ go build -o oom-killer
 ./oom-killer monitor --use-config --kill-user-processes --kill-browsers --zombies-only
 ./oom-killer monitor --use-config --kill-safe --min-oom-score=600
 ./oom-killer monitor --use-config --kill-important --kill-safe --interval=30s
+
+# Monitor with memory alerts (desktop notifications)
+./oom-killer monitor --memory-alert
+./oom-killer monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
+./oom-killer monitor --use-config --kill-user-processes --memory-alert
 
 # Show statistics (includes safety breakdown)
 ./oom-killer stats
@@ -94,6 +100,8 @@ oom-saver/
 │   ├── process/              # Process management logic
 │   │   ├── process.go        # Process detection, parsing, killing
 │   │   └── classifier.go     # Safety classification logic
+│   ├── memory/               # Memory monitoring and alerts
+│   │   └── memory.go         # Memory stats, desktop notifications
 │   └── ui/                   # UI formatting and display
 │       └── ui.go             # Colors, progress bars, tables, safety icons
 ├── go.mod
@@ -124,6 +132,15 @@ oom-saver/
 - `isImportantProcessName()`: Checks against important process list
 - Hardcoded lists of critical, important, and browser process names
 
+**pkg/memory/memory.go** (NEW)
+- `MemoryStats` struct: Holds total, free, available, used memory in MB and usage percentage
+- `MemoryAlert` struct: Manages alert state, threshold, and cooldown configuration
+- `GetMemoryStats()`: Reads memory info from `/proc/meminfo`
+- `CheckMemoryThreshold()`: Checks if available memory is below threshold
+- `SendDesktopNotification()`: Sends desktop popup using `notify-send`
+- `NotifyIfLowMemory()`: Main function - checks memory and sends alert if needed
+- `GetMemoryStatusString()`: Formats memory status for display
+
 **pkg/ui/ui.go**
 - Color scheme:
   - Status: Green (running), Yellow (sleeping/idle), Red (zombie), Cyan (headers)
@@ -141,7 +158,7 @@ oom-saver/
 - `list.go`: `--safety` filter for filtering by safety level
 - `monitor.go`: Supports both legacy zombie killing and new configurable cleanup
   - Legacy flags: `--auto-kill-all-zombies`, `--no-auto-kill`
-  - NEW configurable cleanup flags:
+  - Configurable cleanup flags:
     - `--use-config`: Enable custom cleanup configuration
     - `--kill-user-processes`: Auto-kill user processes (UID >= 1000)
     - `--kill-browsers`: Auto-kill browser processes
@@ -149,6 +166,10 @@ oom-saver/
     - `--kill-important`: Auto-kill important level processes
     - `--min-oom-score=N`: Kill processes with OOM score >= N
     - `--zombies-only`: Only kill zombies (safer)
+  - Memory monitoring flags (NEW):
+    - `--memory-alert`: Enable desktop notifications for low memory
+    - `--memory-threshold=N`: Alert when available memory < N GB (default: 3)
+    - `--memory-cooldown=N`: Minutes between alerts (default: 15)
 - `kill.go`: Added safety checks and `--force` flag
 - `classify.go`: Shows detailed classification for a PID
 - `install.go`: NEW - Interactive installer with guided cleanup configuration
@@ -212,12 +233,16 @@ The `install` command provides an **interactive installation experience**:
    - Browser processes (Chrome, Firefox, etc.) - Default: YES
    - Zombies only mode (safer) - Default: YES
    - Advanced options (safety levels, OOM scores) - Default: NO
+   - Memory alerts (desktop notifications) - Default: YES
+     - Threshold in GB - Default: 3
+     - Cooldown in minutes - Default: 15
 
 2. **Configuration Summary**: Shows all settings before installation
 
 3. **Service Creation**: Generates systemd service file with custom flags based on user choices
+   - Automatically configures DISPLAY and DBUS environment for desktop notifications
 
-4. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services
+4. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services. Sends desktop notifications when memory is low.
 
 The service is installed to:
 - Binary: `/usr/local/bin/oom-killer`

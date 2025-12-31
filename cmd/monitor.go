@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"sakthiRathinam/oom-saver/pkg/memory"
 	"sakthiRathinam/oom-saver/pkg/process"
 	"sakthiRathinam/oom-saver/pkg/ui"
 )
@@ -21,7 +22,12 @@ var (
 	monitorMinOOMScore     int
 	monitorZombiesOnly     bool
 	monitorUseConfig       bool
+	monitorMemoryAlert     bool
+	monitorMemoryThreshold int
+	monitorMemoryCooldown  int
 )
+
+var memAlert *memory.MemoryAlert
 
 var monitorCmd = &cobra.Command{
 	Use:   "monitor",
@@ -59,6 +65,13 @@ var monitorCmd = &cobra.Command{
 			fmt.Printf("%s Auto-killing only SAFE zombies\n", ui.Green("✓"))
 		}
 
+		// Initialize memory alert if enabled
+		if monitorMemoryAlert {
+			memAlert = memory.NewMemoryAlert(monitorMemoryThreshold, monitorMemoryCooldown)
+			fmt.Printf("%s Memory alerts enabled (threshold: %d GB available, cooldown: %d min)\n",
+				ui.Cyan("ℹ️"), monitorMemoryThreshold, monitorMemoryCooldown)
+		}
+
 		ticker := time.NewTicker(monitorInterval)
 		defer ticker.Stop()
 
@@ -74,6 +87,28 @@ var monitorCmd = &cobra.Command{
 
 func killProcessToCleanUPMEM() {
 	ui.PrintTimestamp()
+
+	// Check memory and send alert if enabled
+	if monitorMemoryAlert && memAlert != nil {
+		memStats, err := memory.GetMemoryStats()
+		if err != nil {
+			fmt.Printf("%s Error fetching memory stats: %v\n", ui.Red("✗"), err)
+		} else {
+			// Display memory status
+			statusStr := memory.GetMemoryStatusString(memStats)
+			if memStats.AvailableMB <= monitorMemoryThreshold*1024 {
+				fmt.Printf("%s %s\n", ui.Red("⚠️"), ui.Red(statusStr))
+			} else {
+				fmt.Printf("%s %s\n", ui.Green("ℹ️"), ui.Cyan(statusStr))
+			}
+
+			// Send notification if threshold is crossed
+			err = memAlert.NotifyIfLowMemory()
+			if err != nil {
+				fmt.Printf("%s Memory alert check failed: %v\n", ui.Yellow("⚠️"), err)
+			}
+		}
+	}
 
 	processes, err := process.GetAllRunningProcesses()
 	if err != nil {
@@ -126,4 +161,9 @@ func init() {
 	monitorCmd.Flags().BoolVar(&monitorKillImportant, "kill-important", false, "Auto-kill important level processes")
 	monitorCmd.Flags().IntVar(&monitorMinOOMScore, "min-oom-score", 0, "Minimum OOM score to kill (0 = disabled)")
 	monitorCmd.Flags().BoolVar(&monitorZombiesOnly, "zombies-only", false, "Only kill zombie processes (ignore running processes)")
+
+	// Memory monitoring flags
+	monitorCmd.Flags().BoolVar(&monitorMemoryAlert, "memory-alert", false, "Enable desktop notifications for low memory")
+	monitorCmd.Flags().IntVar(&monitorMemoryThreshold, "memory-threshold", 3, "Memory threshold in GB (alert when available memory is below this)")
+	monitorCmd.Flags().IntVar(&monitorMemoryCooldown, "memory-cooldown", 15, "Cooldown in minutes between memory alerts")
 }

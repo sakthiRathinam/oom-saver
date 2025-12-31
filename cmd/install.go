@@ -20,6 +20,9 @@ type CleanupSettings struct {
 	MinOOMScore       int
 	ZombiesOnly       bool
 	Interval          int
+	MemoryAlert       bool
+	MemoryThreshold   int
+	MemoryCooldown    int
 }
 
 func askYesNo(question string, defaultYes bool) bool {
@@ -84,6 +87,15 @@ func getCleanupSettings() CleanupSettings {
 		settings.MinOOMScore = askNumber("  Minimum OOM score to kill (recommended: 500-800)", 0, 0, 1000)
 	}
 
+	fmt.Printf("\n%s\n", ui.Bold("Memory Monitoring"))
+	fmt.Printf("Enable desktop notifications when system memory is low:\n\n")
+
+	settings.MemoryAlert = askYesNo("Enable memory alerts?", true)
+	if settings.MemoryAlert {
+		settings.MemoryThreshold = askNumber("  Alert when available memory is below (GB)", 3, 1, 32)
+		settings.MemoryCooldown = askNumber("  Cooldown between alerts (minutes)", 15, 1, 120)
+	}
+
 	fmt.Printf("\n%s\n", ui.Bold("Monitoring Interval"))
 	settings.Interval = askNumber("How often should the monitor scan (seconds)?", 10, 1, 3600)
 
@@ -111,6 +123,15 @@ func generateSystemdService(settings CleanupSettings) string {
 	if settings.ZombiesOnly {
 		cmdFlags = append(cmdFlags, "--zombies-only")
 	}
+	if settings.MemoryAlert {
+		cmdFlags = append(cmdFlags, "--memory-alert")
+		if settings.MemoryThreshold != 3 {
+			cmdFlags = append(cmdFlags, fmt.Sprintf("--memory-threshold=%d", settings.MemoryThreshold))
+		}
+		if settings.MemoryCooldown != 15 {
+			cmdFlags = append(cmdFlags, fmt.Sprintf("--memory-cooldown=%d", settings.MemoryCooldown))
+		}
+	}
 	if settings.Interval != 5 {
 		cmdFlags = append(cmdFlags, fmt.Sprintf("--interval=%ds", settings.Interval))
 	}
@@ -126,6 +147,8 @@ Type=simple
 ExecStart=%s
 Restart=always
 RestartSec=10
+Environment="DISPLAY=:0"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus"
 
 [Install]
 WantedBy=multi-user.target
@@ -164,6 +187,11 @@ var installCmd = &cobra.Command{
 		fmt.Printf("  • Important level:    %s\n", formatBool(settings.KillImportant))
 		if settings.MinOOMScore > 0 {
 			fmt.Printf("  • Min OOM score:      %d\n", settings.MinOOMScore)
+		}
+		fmt.Printf("  • Memory alerts:      %s\n", formatBool(settings.MemoryAlert))
+		if settings.MemoryAlert {
+			fmt.Printf("    - Threshold:        %d GB\n", settings.MemoryThreshold)
+			fmt.Printf("    - Cooldown:         %d min\n", settings.MemoryCooldown)
 		}
 		fmt.Printf("  • Scan interval:      %ds\n", settings.Interval)
 
