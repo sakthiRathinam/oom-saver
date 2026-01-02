@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OOM-Killer is a beautiful Cobra-based CLI tool for Linux system process monitoring and management. It features intelligent process safety classification, monitors processes, detects and kills zombies safely, and can be installed as a systemd service.
+oom-saver is a beautiful Cobra-based CLI tool for Linux system process monitoring and management. It features intelligent process safety classification, monitors processes, detects and kills zombies safely, and can be installed as a systemd service.
 
 ### Key Features
 
@@ -23,44 +23,44 @@ OOM-Killer is a beautiful Cobra-based CLI tool for Linux system process monitori
 
 ### Build
 ```bash
-go build -o oom-killer
+go build -o oom-saver
 ```
 
 ### Run Commands
 ```bash
 # List all processes
-./oom-killer list
+./oom-saver list
 
 # List with filters
-./oom-killer list --safety critical  # Show only critical processes
-./oom-killer list --safety safe      # Show only safe processes
-./oom-killer list --status zombie    # Show only zombies
-./oom-killer list --limit 50         # Limit output
+./oom-saver list --safety critical  # Show only critical processes
+./oom-saver list --safety safe      # Show only safe processes
+./oom-saver list --status zombie    # Show only zombies
+./oom-saver list --limit 50         # Limit output
 
 # Classify a specific process
-./oom-killer classify <PID>
+./oom-saver classify <PID>
 
 # Monitor processes continuously
-./oom-killer monitor
-./oom-killer monitor --auto-kill-all-zombies  # Kill all zombies (unsafe)
-./oom-killer monitor --no-auto-kill           # Disable auto-kill
+./oom-saver monitor
+./oom-saver monitor --auto-kill-all-zombies  # Kill all zombies (unsafe)
+./oom-saver monitor --no-auto-kill           # Disable auto-kill
 
 # Monitor with custom cleanup configuration
-./oom-killer monitor --use-config --kill-user-processes --kill-browsers --zombies-only
-./oom-killer monitor --use-config --kill-safe --min-oom-score=600
-./oom-killer monitor --use-config --kill-important --kill-safe --interval=30s
+./oom-saver monitor --use-config --kill-user-processes --kill-browsers --zombies-only
+./oom-saver monitor --use-config --kill-safe --min-oom-score=600
+./oom-saver monitor --use-config --kill-important --kill-safe --interval=30s
 
 # Monitor with memory alerts (desktop notifications)
-./oom-killer monitor --memory-alert
-./oom-killer monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
-./oom-killer monitor --use-config --kill-user-processes --memory-alert
+./oom-saver monitor --memory-alert
+./oom-saver monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
+./oom-saver monitor --use-config --kill-user-processes --memory-alert
 
 # Show statistics (includes safety breakdown)
-./oom-killer stats
+./oom-saver stats
 
 # Kill a specific process (with safety checks)
-./oom-killer kill <PID>
-./oom-killer kill <PID> --force  # Force kill critical process (dangerous)
+./oom-saver kill <PID>
+./oom-saver kill <PID> --force  # Force kill critical process (dangerous)
 
 # Install as systemd service (requires sudo)
 # Interactive installer will ask what to auto-kill:
@@ -68,7 +68,7 @@ go build -o oom-killer
 # - Browser processes (default: yes)
 # - Zombies only mode (default: yes - safer)
 # - Advanced options: safety levels, OOM score thresholds
-sudo ./oom-killer install
+sudo ./oom-saver install
 ```
 
 ### Testing
@@ -250,15 +250,15 @@ The `install` command provides an **interactive installation experience**:
 5. **Default Behavior**: By default, only kills user-owned and browser zombie/problematic processes, protecting all system services. Sends desktop notifications when memory is low.
 
 The service is installed to:
-- Binary: `/usr/local/bin/oom-killer`
-- Service file: `/etc/systemd/system/oom-killer.service`
+- Binary: `/usr/local/bin/oom-saver`
+- Service file: `/etc/systemd/system/oom-saver.service`
 
 Manage the service with:
 ```bash
-sudo systemctl status oom-killer
-sudo systemctl stop oom-killer
-sudo systemctl start oom-killer
-sudo journalctl -u oom-killer -f
+sudo systemctl status oom-saver
+sudo systemctl stop oom-saver
+sudo systemctl start oom-saver
+sudo journalctl -u oom-saver -f
 ```
 
-To reconfigure: Stop service, run `sudo ./oom-killer install` again with new settings.
+To reconfigure: Stop service, run `sudo ./oom-saver install` again with new settings.

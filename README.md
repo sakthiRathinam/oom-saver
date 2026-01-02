@@ -1,4 +1,4 @@
-# OOM-Killer
+# oom-saver
 
 A beautiful, intelligent Linux process monitoring and management tool with smart safety classification and automated zombie cleanup.
 
@@ -27,13 +27,13 @@ A beautiful, intelligent Linux process monitoring and management tool with smart
 ```bash
 git clone <repository-url>
 cd oom-saver
-go build -o oom-killer
+go build -o oom-saver
 ```
 
 ### Install as Systemd Service
 
 ```bash
-sudo ./oom-killer install
+sudo ./oom-saver install
 ```
 
 The install command will:
@@ -70,58 +70,58 @@ sudo zypper install libnotify-tools
 
 ```bash
 # List all processes with safety classification
-./oom-killer list
+./oom-saver list
 
 # Filter by safety level
-./oom-killer list --safety critical
-./oom-killer list --safety safe
+./oom-saver list --safety critical
+./oom-saver list --safety safe
 
 # Filter by status
-./oom-killer list --status zombie
+./oom-saver list --status zombie
 
 # Limit output
-./oom-killer list --limit 50
+./oom-saver list --limit 50
 ```
 
 ### Monitor Processes
 
 ```bash
 # Monitor with safe auto-kill (default)
-./oom-killer monitor
+./oom-saver monitor
 
 # Monitor with aggressive zombie cleanup
-./oom-killer monitor --auto-kill-all-zombies
+./oom-saver monitor --auto-kill-all-zombies
 
 # Monitor without auto-kill
-./oom-killer monitor --no-auto-kill
+./oom-saver monitor --no-auto-kill
 
 # Monitor with memory alerts (desktop notifications)
-./oom-killer monitor --memory-alert
-./oom-killer monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
+./oom-saver monitor --memory-alert
+./oom-saver monitor --memory-alert --memory-threshold=2 --memory-cooldown=10
 ```
 
 ### Show Statistics
 
 ```bash
 # Display process statistics by status and safety level
-./oom-killer stats
+./oom-saver stats
 ```
 
 ### Classify a Process
 
 ```bash
 # Show detailed classification for a specific PID
-./oom-killer classify <PID>
+./oom-saver classify <PID>
 ```
 
 ### Kill a Process
 
 ```bash
 # Kill with safety checks
-./oom-killer kill <PID>
+./oom-saver kill <PID>
 
 # Force kill critical process (requires confirmation)
-./oom-killer kill <PID> --force
+./oom-saver kill <PID> --force
 ```
 
 ## Safety Classification
@@ -163,21 +163,21 @@ After installation, manage the service with:
 
 ```bash
 # Check status
-sudo systemctl status oom-killer
+sudo systemctl status oom-saver
 
 # Start/stop/restart
-sudo systemctl start oom-killer
-sudo systemctl stop oom-killer
-sudo systemctl restart oom-killer
+sudo systemctl start oom-saver
+sudo systemctl stop oom-saver
+sudo systemctl restart oom-saver
 
 # View logs
-sudo journalctl -u oom-killer -f
+sudo journalctl -u oom-saver -f
 
 # Disable auto-start
-sudo systemctl disable oom-killer
+sudo systemctl disable oom-saver
 ```
 
-The service runs `oom-killer monitor` with your configured options continuously in the background.
+The service runs `oom-saver monitor` with your configured options continuously in the background.
 
 ### Reconfigure Service
 
@@ -185,24 +185,24 @@ To change cleanup rules after installation:
 
 ```bash
 # Uninstall and reinstall with new settings
-sudo systemctl stop oom-killer
-sudo systemctl disable oom-killer
-sudo rm /etc/systemd/system/oom-killer.service
-sudo ./oom-killer install
+sudo systemctl stop oom-saver
+sudo systemctl disable oom-saver
+sudo rm /etc/systemd/system/oom-saver.service
+sudo ./oom-saver install
 ```
 
-Or manually edit `/etc/systemd/system/oom-killer.service` and reload:
+Or manually edit `/etc/systemd/system/oom-saver.service` and reload:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart oom-killer
+sudo systemctl restart oom-saver
 ```
 
 ## How It Works
 
 ### Memory Monitoring
 
-OOM-Killer can monitor system memory and send desktop notifications **before** the Linux OOM killer starts killing processes.
+oom-saver can monitor system memory and send desktop notifications **before** the Linux OOM killer starts killing processes.
 
 When memory alerts are enabled:
 1. Monitors available system memory every scan interval
@@ -223,7 +223,7 @@ The installer automatically configures environment variables for desktop notific
 
 ### Process Detection
 
-OOM-Killer reads from the Linux `/proc` filesystem to gather:
+oom-saver reads from the Linux `/proc` filesystem to gather:
 - Process ID (PID)
 - Process name
 - Status (running, sleeping, zombie, etc.)
@@ -245,7 +245,7 @@ Each process is classified based on:
 
 ### Smart Zombie Killing
 
-By default, OOM-Killer only kills zombie processes that are classified as "Safe":
+By default, oom-saver only kills zombie processes that are classified as "Safe":
 - User-owned zombies
 - Zombies from crashed browsers
 - High OOM score zombies
@@ -290,10 +290,10 @@ go test ./...
 go fmt ./...
 
 # Build
-go build -o oom-killer
+go build -o oom-saver
 
 # Run locally
-./oom-killer list
+./oom-saver list
 ```
 
 ## Platform Support
@@ -324,21 +324,21 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 Most commands require root access to read all process information:
 ```bash
-sudo ./oom-killer list
+sudo ./oom-saver list
 ```
 
 ### Service won't start
 
 Check logs for details:
 ```bash
-sudo journalctl -u oom-killer -n 50
+sudo journalctl -u oom-saver -n 50
 ```
 
 ### Too aggressive killing
 
 Reconfigure with more conservative settings:
 ```bash
-sudo ./oom-killer install
+sudo ./oom-saver install
 # Choose more restrictive options during setup
 ```
 

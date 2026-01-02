@@ -8,9 +8,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "oom-killer",
+	Use:   "oom-saver",
 	Short: "A beautiful OOM killer and process monitor for Linux",
-	Long: `OOM-Killer is a powerful process monitoring and management tool.
+	Long: `oom-saver is a powerful process monitoring and management tool.
 It helps you monitor system processes, detect zombies, and prevent out-of-memory situations.`,
 }
 

@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"sakthiRathinam/oom-saver/pkg/ui"
+
+	"github.com/spf13/cobra"
 )
 
 type CleanupSettings struct {
@@ -136,7 +137,7 @@ func generateSystemdService(settings CleanupSettings) string {
 		cmdFlags = append(cmdFlags, fmt.Sprintf("--interval=%ds", settings.Interval))
 	}
 
-	execStart := "/usr/local/bin/oom-killer " + strings.Join(cmdFlags, " ")
+	execStart := "/usr/local/bin/oom-saver " + strings.Join(cmdFlags, " ")
 
 	return fmt.Sprintf(`[Unit]
 Description=OOM Killer - Process Monitor and Zombie Killer
@@ -164,14 +165,14 @@ func formatBool(value bool) string {
 
 var installCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install oom-killer as a systemd service",
-	Long:  `Install the oom-killer binary to /usr/local/bin and create a systemd service.`,
+	Short: "Install oom-saver as a systemd service",
+	Long:  `Install the oom-saver binary to /usr/local/bin and create a systemd service.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if os.Geteuid() != 0 {
 			return fmt.Errorf("%s this command requires root privileges. Run with sudo", ui.Red("✗"))
 		}
 
-		ui.PrintHeader("📦 INSTALLING OOM-KILLER")
+		ui.PrintHeader("📦 INSTALLING oom-saver")
 
 		// Check if notify-send is installed
 		fmt.Printf("\n%s Checking dependencies...\n", ui.Cyan("ℹ️"))
@@ -224,20 +225,20 @@ var installCmd = &cobra.Command{
 			return fmt.Errorf("failed to get executable path: %w", err)
 		}
 
-		fmt.Printf("\n%s Copying binary to /usr/local/bin/oom-killer...\n", ui.Cyan("1."))
+		fmt.Printf("\n%s Copying binary to /usr/local/bin/oom-saver...\n", ui.Cyan("1."))
 		input, err := os.ReadFile(execPath)
 		if err != nil {
 			return fmt.Errorf("failed to read executable: %w", err)
 		}
 
-		err = os.WriteFile("/usr/local/bin/oom-killer", input, 0755)
+		err = os.WriteFile("/usr/local/bin/oom-saver", input, 0o755)
 		if err != nil {
 			return fmt.Errorf("failed to copy binary: %w", err)
 		}
 		fmt.Printf("   %s Binary installed\n", ui.Green("✓"))
 
 		fmt.Printf("\n%s Creating systemd service file...\n", ui.Cyan("2."))
-		err = os.WriteFile("/etc/systemd/system/oom-killer.service", []byte(serviceContent), 0644)
+		err = os.WriteFile("/etc/systemd/system/oom-saver.service", []byte(serviceContent), 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to create service file: %w", err)
 		}
@@ -251,14 +252,14 @@ var installCmd = &cobra.Command{
 		fmt.Printf("   %s Daemon reloaded\n", ui.Green("✓"))
 
 		fmt.Printf("\n%s Enabling service...\n", ui.Cyan("4."))
-		err = exec.Command("systemctl", "enable", "oom-killer.service").Run()
+		err = exec.Command("systemctl", "enable", "oom-saver.service").Run()
 		if err != nil {
 			return fmt.Errorf("failed to enable service: %w", err)
 		}
 		fmt.Printf("   %s Service enabled\n", ui.Green("✓"))
 
 		fmt.Printf("\n%s Starting service...\n", ui.Cyan("5."))
-		err = exec.Command("systemctl", "start", "oom-killer.service").Run()
+		err = exec.Command("systemctl", "start", "oom-saver.service").Run()
 		if err != nil {
 			return fmt.Errorf("failed to start service: %w", err)
 		}
@@ -266,10 +267,10 @@ var installCmd = &cobra.Command{
 
 		fmt.Printf("\n%s Installation complete!\n", ui.Green("✓"))
 		fmt.Printf("\n%s\n", ui.Bold("Useful commands:"))
-		fmt.Printf("  • Check status:  %s\n", ui.Cyan("sudo systemctl status oom-killer"))
-		fmt.Printf("  • View logs:     %s\n", ui.Cyan("sudo journalctl -u oom-killer -f"))
-		fmt.Printf("  • Stop service:  %s\n", ui.Cyan("sudo systemctl stop oom-killer"))
-		fmt.Printf("  • Disable:       %s\n", ui.Cyan("sudo systemctl disable oom-killer"))
+		fmt.Printf("  • Check status:  %s\n", ui.Cyan("sudo systemctl status oom-saver"))
+		fmt.Printf("  • View logs:     %s\n", ui.Cyan("sudo journalctl -u oom-saver -f"))
+		fmt.Printf("  • Stop service:  %s\n", ui.Cyan("sudo systemctl stop oom-saver"))
+		fmt.Printf("  • Disable:       %s\n", ui.Cyan("sudo systemctl disable oom-saver"))
 		fmt.Println()
 
 		return nil
